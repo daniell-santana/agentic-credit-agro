@@ -1,0 +1,45 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== Estado gerado em runtime (nunca versionar) =====
+data/adaptive_state.json
+data/outcomes.json
+experiments/results.json
+
+# ===== Segredos =====
+.env
+.env.*
+!.env.example
+
+# ===== Node (apenas usado para vendorizar libs, node_modules nunca sobe) =====
+node_modules/
+
+# ===== SO / editores =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# ===== Logs =====
+*.log
+/tmp/
+
+# ===== Dados sintéticos grandes (regenerráveis via scripts/generate_synthetic_data.py) =====
+# Descomente as linhas abaixo se preferir NÃO versionar o dataset gerado
+# e regenerá-lo no primeiro deploy (recomendado para repos públicos):
+# data/synthetic/*.csv
+# data/synthetic/*.jsonl
+# data/synthetic/meta.json

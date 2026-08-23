@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: farmtech-agentic-credit-risk
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: "pip install -r requirements.txt && python scripts/generate_synthetic_data.py --seed 42"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      # Opcional — deixe em branco no dashboard se não quiser o botão
+      # "Explicar com IA". sync: false = Render pede o valor manualmente
+      # na hora do deploy e NUNCA versiona a chave no repositório.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_NARRATIVE_MODEL
+        value: gpt-4o-mini

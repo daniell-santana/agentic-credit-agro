@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FarmTech · GESTÃO DE RISCO DA CARTEIRA DE CRÉDITO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=6">
+<script src="vendor/chart.umd.min.js"></script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<script src="vendor/leaflet/leaflet.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ===== HEADER ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">FT</span>
+      <div class="brand-text">
+        <span class="brand-name">FARMTECH</span>
+        <span class="brand-sub">GESTÃO DE RISCO DA CARTEIRA DE CRÉDITO</span>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <span class="badge badge-synthetic">DADOS 100% SINTÉTICOS</span>
+      <span class="badge badge-article" id="badgeArchitecture" tabindex="0" role="button">DEMONSTRAÇÃO DA ARQUITETURA</span>
+    </div>
+
+    <div class="topbar-actions">
+      <span id="connStatus" class="conn-dot conn-off" role="status" aria-label="Status da conexão: desconectado" title="Status da conexão"></span>
+      <button id="btnHelp" class="btn btn-ghost">Como usar</button>
+      <button id="btnHelpDetailed" class="btn btn-ghost btn-small" title="Tutorial detalhado por perfil (analista, gerente, CEO...)">Tutorial por perfil</button>
+      <button id="btnStreamToggle" class="btn btn-primary">Iniciar simulação</button>
+    </div>
+  </header>
+
+  <!-- ===== MAIN TABS (secao 5 do plano) ===== -->
+  <nav class="main-tabs" id="mainTabs">
+    <button class="main-tab active" data-tab="carteira">1. Visão da Carteira</button>
+    <button class="main-tab" data-tab="operacoes">2. Operações</button>
+    <button class="main-tab" data-tab="aprendizado">3. Aprendizado do Sistema</button>
+  </nav>
+
+  <!-- ============================================================ -->
+  <!-- ABA 1 — VISAO DA CARTEIRA                                     -->
+  <!-- ============================================================ -->
+  <section class="tab-content" id="tab-carteira">
+
+    <section class="intro-cards" id="introCards">
+      <div class="intro-card">
+        <h3>Objetivo da ferramenta</h3>
+        <p>O painel <strong>simula uma gestão de carteira em tempo real</strong>: novos dados entram, o sistema reavalia
+          o risco das operações, explica as principais mudanças, prioriza os casos que precisam de
+          atenção e aprende com os resultados que acontecem depois.</p>
+      </div>
+      <div class="intro-card">
+        <h3>Por que isso é importante para a gestão preditiva da carteira?</h3>
+        <p>Porque permite <strong>identificar mudanças no risco antes que elas se transformem em inadimplência</strong>.
+          Em vez de a equipe olhar apenas para operações que já apresentaram problemas, o painel mostra
+          quais operações estão se deteriorando, quanto o risco mudou e quais fatores estão contribuindo
+          para essa mudança.</p>
+      </div>
+      <div class="intro-card">
+        <h3>Qual é o diferencial?</h3>
+        <p>Transformar a previsão de risco em acompanhamento contínuo da carteira. <strong>O sistema não apenas
+          informa a probabilidade de inadimplência de uma operação: ele acompanha a evolução desse risco,
+          identifica mudanças relevantes, mostra os principais fatores associados<strong>, permite avaliar
+          cenários e <strong>aprende com os resultados observados ao longo do tempo</strong>.</p>
+      </div>
+    </section>
+
+    <section class="kpi-row" id="kpiRowCarteira">
+      <div class="kpi-card"><span class="kpi-label">Operações<span class="info-icon" tabindex="0" data-tooltip="Quantidade de operações processadas pela simulação desde que o stream foi iniciado.">i</span></span><span class="kpi-value" id="kpiOperacoes">0</span></div>
+      <div class="kpi-card"><span class="kpi-label">Valor total<span class="info-icon" tabindex="0" data-tooltip="Soma do valor solicitado de todas as operações processadas na simulação atual.">i</span></span><span class="kpi-value" id="kpiValorTotal">R$ 0</span></div>
+      <div class="kpi-card"><span class="kpi-label">PD média da carteira<span class="info-icon" tabindex="0" data-tooltip="Média da probabilidade de inadimplência (PD) de todas as operações da carteira simulada; não confundir com o PD de uma única operação.">i</span></span><span class="kpi-value" id="kpiPdMediaCarteira">–</span></div>
+      <div class="kpi-card kpi-reject"><span class="kpi-label">Alto risco<span class="info-icon" tabindex="0" data-tooltip="Operações cujo PD está acima do limite de decisão atual.">i</span></span><span class="kpi-value" id="kpiAltoRisco">0</span></div>
+      <div class="kpi-card kpi-review"><span class="kpi-label">Aumentaram de risco<span class="info-icon" tabindex="0" data-tooltip="Operações do mesmo produtor cujo PD subiu 5 pontos percentuais ou mais desde a última observação.">i</span></span><span class="kpi-value" id="kpiAumentaramRisco">0</span></div>
+      <div class="kpi-card"><span class="kpi-label">Em análise<span class="info-icon" tabindex="0" data-tooltip="Operações classificadas como 'Analisar': PD acima do limite de decisão, exigindo revisão humana.">i</span></span><span class="kpi-value" id="kpiEmAnalise">0</span></div>
+    </section>
+
+    <section class="panel-grid-2col">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Distribuição do risco<span class="info-icon" tabindex="0" data-tooltip="Proporção das operações da carteira simulada em cada faixa de risco: baixo (PD < 60% do limite de decisão), intermediário (até o limite) e alto (acima do limite).">i</span></h2>
+          <button id="btnExplainDistribution" class="btn btn-ghost btn-small">✨ Explicar com IA</button>
+        </div>
+        <div id="riskDistribution" class="risk-distribution">
+          <div class="empty-state">Inicie a simulação para ver a distribuição.</div>
+        </div>
+        <div id="distributionNarrativeBox" class="narrative-box hidden"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Evolução do risco da carteira<span class="info-icon" tabindex="0" data-tooltip="PD média da carteira, quantidade de operações de alto risco, ou exposição em alto risco, acompanhados ao longo das operações processadas.">i</span></h2>
+          <div class="chart-selector" id="evolutionSelector">
+            <button class="chip active" data-metric="pd">PD média</button>
+            <button class="chip" data-metric="count">Operações de alto risco</button>
+            <button class="chip" data-metric="exposure">Exposição em alto risco</button>
+          </div>
+        </div>
+        <canvas id="evolutionChart" height="140"></canvas>
+        <div class="panel-actions-row">
+          <button id="btnExplainEvolution" class="btn btn-ghost btn-small">✨ Explicar com IA</button>
+        </div>
+        <div id="evolutionNarrativeBox" class="narrative-box hidden"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Alertas de Mudança de Riscode Crédito<span class="info-icon" tabindex="0" data-tooltip="Comparação entre a PD atual e a PD anterior para identificar operações cujo risco estimado aumentou ou diminuiu.">i</span></h2></div>
+      <div class="change-cards">
+        <div class="change-card change-up">
+          <span class="change-num" id="changeUp">0</span>
+          <span>operações aumentaram de risco<span class="info-icon" tabindex="0" data-tooltip="Operações em que a PD atual ficou maior que a PD anterior, indicando aumento no risco estimado de inadimplência.">i</span></span>
+        </div>
+        <div class="change-card change-warn">
+          <span class="change-num" id="changeWarn">0</span>
+          <span>ultrapassaram o limite de decisão<span class="info-icon" tabindex="0" data-tooltip="Operações cuja PD atual passou do limite de risco definido pelo negócio, sinalizando que precisam de atenção ou reavaliação.">i</span></span>
+        </div>
+        <div class="change-card change-down">
+          <span class="change-num" id="changeDown">0</span>
+          <span>reduziram o risco<span class="info-icon" tabindex="0" data-tooltip="Operações em que a PD atual ficou menor que a PD anterior, indicando redução no risco estimado de inadimplência.">i</span></span>
+        </div>
+      </div>
+      <div class="region-changes-wrap">
+        <table class="region-changes-table">
+          <thead><tr><th>Produtor</th><th>PD anterior</th><th>PD atual</th><th>Variação</th></tr></thead>
+          <tbody id="regionChangesBody"><tr><td colspan="4" class="empty-state">Sem dados suficientes ainda.</td></tr></tbody>
+        </table>
+      </div>
+      <p class="panel-footnote">
+        <b>PD anterior</b> = risco de inadimplência que o modelo calculava antes, usando as
+        informações disponíveis naquele momento. <b>PD atual</b> = risco de inadimplência
+        calculado agora, depois que novas informações foram incorporadas. Esta seção mostra a
+        evolução do risco estimado: a PD atual é comparada com a PD da avaliação anterior para
+        identificar operações cujo risco de inadimplência aumentou ou diminuiu. Quando a PD
+        atual ultrapassa o limite de decisão definido, a operação é sinalizada para atenção ou
+        reavaliação. Essa análise é <b>preditiva</b>: indica mudança no risco estimado, não
+        confirma que uma inadimplência já ocorreu.
+      </p>
+    </section>
+
+    <section class="panel map-panel-full">
+      <div class="panel-head">
+        <h2>Risco médio por estado<span class="info-icon" tabindex="0" data-tooltip="Risco médio por estado, agregado a partir do dataset sintético de aplicações. Cor relativa ao intervalo observado entre os estados; é uma camada de agregação para gestão, o estado não é usado como variável numérica do modelo.">i</span></h2>
+        <button id="btnExplainMap" class="btn btn-ghost btn-small">✨ Explicar com IA</button>
+      </div>
+      <div id="mapBrazil"></div>
+      <div id="mapNarrativeBox" class="narrative-box hidden"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Atenção agora<span class="info-icon" tabindex="0" data-tooltip="Resumo das operações que mais precisam da sua atenção neste momento; por dois motivos diferentes: risco absoluto alto, ou tendência recente de piora (mesmo com risco absoluto ainda baixo).">i</span></h2></div>
+      <div class="attention-list" id="attentionList">
+        <div class="attention-row attention-red">
+          <span id="attRedCount">0</span> operações exigem análise
+          <span class="info-icon" tabindex="0" data-tooltip="PD atual ACIMA do limite de decisão: risco absoluto alto, decisão de crédito precisa de revisão humana agora.">i</span>
+        </div>
+        <div class="attention-row attention-yellow">
+          <span id="attYellowCount">0</span> operações apresentaram aumento relevante de risco
+          <span class="info-icon" tabindex="0" data-tooltip="PD subiu 5 pontos percentuais ou mais desde a última observação do mesmo produtor; MESMO que o PD atual continue baixo. O sinal aqui é a tendência (velocidade da piora), não o nível absoluto: pegar isso cedo, antes que o risco acumule até passar do limite, é o valor preditivo desta seção.">i</span>
+        </div>
+        <div class="attention-row attention-neutral" id="attRegionRow">Nenhuma região com mudança acima do padrão observado</div>
+      </div>
+      <p class="panel-footnote">
+        <b>Esta seção sinaliza dois tipos de alerta diferentes</b>: risco <i>absoluto</i> (PD já
+        passou do limite de decisão: linha vermelha) e risco <i>de tendência</i> (PD subiu rápido
+        recentemente, mesmo que o nível atual ainda seja considerado baixo: linha amarela). Um
+        produtor cujo PD foi de 18% para 27% não está em risco imediato, mas a velocidade dessa
+        mudança pode ser o primeiro sinal de uma deterioração maior; safra ruim, queda de preço,
+        aumento de endividamento. Investigar nesse estágio, antes que o risco acumule até passar
+        do limite, é justamente o que separa uma gestão preditiva de uma gestão reativa.
+      </p>
+      <button id="btnVerOperacoes" class="btn btn-accent" style="margin-top:14px;">Ver operações</button>
+    </section>
+
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ABA 2 — OPERACOES                                             -->
+  <!-- ============================================================ -->
+  <section class="tab-content hidden" id="tab-operacoes">
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Operações<span class="info-icon" tabindex="0" data-tooltip="Encontre as operações que precisam de atenção, entenda o motivo da mudança e veja a decisão recomendada.">i</span></h2>
+      </div>
+      <div class="ops-filters">
+        <input type="text" id="opFilterSearch" placeholder="Buscar produtor ou código…" aria-label="Buscar por produtor ou código da operação">
+        <select id="opFilterState" aria-label="Filtrar por estado"><option value="">Todos os estados</option></select>
+        <select id="opFilterSituacao" aria-label="Filtrar por situação">
+          <option value="">Todas as situações</option>
+          <option value="analisar">Analisar</option>
+          <option value="acompanhar">Acompanhar</option>
+          <option value="sem_alteracao">Sem alteração</option>
+        </select>
+        <select id="opFilterRisco" aria-label="Filtrar por faixa de risco">
+          <option value="">Todas as faixas de risco</option>
+          <option value="baixo">Baixo</option>
+          <option value="medio">Intermediário</option>
+          <option value="alto">Alto</option>
+        </select>
+        <button id="btnClearOpFilters" class="btn btn-ghost">Limpar filtros</button>
+      </div>
+      <div class="predictions-table-wrap">
+        <table class="predictions-table">
+          <thead>
+            <tr>
+              <th>Data/Hora</th><th>Código</th><th>Produtor</th><th>UF</th><th>Cultura</th>
+              <th>Valor</th><th>PD anterior</th><th>PD atual</th><th>Mudança</th><th>Situação</th>
+            </tr>
+          </thead>
+          <tbody id="operationsBody">
+            <tr><td colspan="10" class="empty-state">Inicie a simulação para ver as operações chegando.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel stress-panel">
+      <div class="panel-head"><h2>Simular cenário<span class="info-icon" tabindex="0" data-tooltip="Recalcula o PD de TODAS as operações que aparecem na tabela abaixo (respeitando os filtros aplicados) sob um cenário hipotético de commodity, chuva ou taxa básica. É uma análise de sensibilidade, não uma ação real sobre a carteira.">i</span></h2></div>
+      <p class="stress-explainer">
+        Escolha um cenário e veja, operação por operação, como o PD de todas as operações da
+        tabela mudaria se ele acontecesse de verdade; inclusive quais passariam a exigir
+        atenção (mesma regra da seção "Atenção agora": risco absoluto e risco de tendência).
+        Nenhuma decisão real é alterada.
+      </p>
+      <div class="stress-presets" id="stressPresets">
+        <button class="chip" data-preset="normal">Condição normal</button>
+        <button class="chip" data-preset="commodity">Queda de commodity</button>
+        <button class="chip" data-preset="seca">Período de seca</button>
+        <button class="chip" data-preset="macro">Estresse econômico</button>
+        <button class="chip" data-preset="combinado">Estresse combinado</button>
+      </div>
+      <div class="stress-form">
+        <label>Commodity (%) <input type="number" id="stressCommodity" value="-20" step="5"></label>
+        <label>Chuva (%) <input type="number" id="stressRainfall" value="-30" step="5"></label>
+        <label>Taxa básica (p.p.) <input type="number" id="stressSelic" value="2" step="0.5"></label>
+        <button id="btnSendStress" class="btn btn-accent">Simular impacto</button>
+      </div>
+      <p class="stress-note">O cálculo passa pelo pipeline matemático completo (mesmo modelo e pesos atuais); não existe atalho manual como "seca → recusar".</p>
+
+      <div id="stressPreviewSection" class="stress-preview hidden">
+        <h3>Resultado da simulação: PD atual vs. PD sob o cenário</h3>
+        <p class="panel-footnote" id="stressPreviewSummary"></p>
+        <div class="predictions-table-wrap">
+          <table class="predictions-table">
+            <thead>
+              <tr><th>Código</th><th>Produtor</th><th>PD atual</th><th>PD simulado</th><th>Variação</th><th>Situação atual</th><th>Situação simulada</th></tr>
+            </thead>
+            <tbody id="stressPreviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </section>
+
+  <!-- Operation detail modal (secao 18 do plano) -->
+  <div id="operationDetailModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="opDetailTitle">Operação</h2>
+        <button id="btnCloseOpDetail" class="btn btn-ghost btn-icon">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="op-detail-grid">
+          <div class="dm"><span class="dm-label">Valor da operação</span><span class="dm-value" id="opDetailValor">–</span></div>
+          <div class="dm"><span class="dm-label">PD atual</span><span class="dm-value" id="opDetailPdAtual">–</span></div>
+          <div class="dm"><span class="dm-label">PD anterior</span><span class="dm-value" id="opDetailPdAnterior">–</span></div>
+          <div class="dm"><span class="dm-label">Variação</span><span class="dm-value" id="opDetailVariacao">–</span></div>
+          <div class="dm"><span class="dm-label">Limite atual</span><span class="dm-value" id="opDetailLimite">–</span></div>
+          <div class="dm"><span class="dm-label">Confiança</span><span class="dm-value" id="opDetailConfianca">–</span></div>
+        </div>
+        <div class="decision-tag" id="opDetailSituacao" style="margin:14px 0;">—</div>
+        <button id="btnNarrative" class="btn btn-ghost btn-narrative" disabled>✨ Explicar com IA</button>
+        <div id="narrativeBox" class="narrative-box hidden"></div>
+
+        <h3 style="margin-top:20px;">Evolução do risco desta operação</h3>
+        <canvas id="opEvolutionChart" height="70"></canvas>
+        <p id="opEvolutionEmpty" class="empty-state hidden">Esta é a primeira observação registrada para este produtor na simulação atual.</p>
+
+        <h3 style="margin-top:20px;">Por que o risco mudou?
+          <button id="btnShowFormula" class="btn btn-ghost btn-small">Como isso é calculado?</button>
+        </h3>
+        <p id="formulaExplanation" class="panel-footnote hidden">
+          A contribuição de cada característica mostra o quanto ela influencia 
+          a probabilidade de inadimplência (PD). Esse impacto é calculado diretamente
+          pelo modelo treinado, analisando como a PD muda quando aquela característica varia.
+        </p>
+        <div id="opDetailFactors" class="explain-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ABA 3 — APRENDIZADO DO SISTEMA                                -->
+  <!-- ============================================================ -->
+  <section class="tab-content hidden" id="tab-aprendizado">
+
+    <section class="kpi-row" id="kpiRowTecnico">
+      <div class="kpi-card"><span class="kpi-label">Acurácia<span class="info-icon" tabindex="0" data-tooltip="Proporção de decisões corretas na janela recente de resultados observados pelo Agente de Aprendizado por Feedback.">i</span></span><span class="kpi-value" id="kpiAcuracia">–</span></div>
+      <div class="kpi-card"><span class="kpi-label">Limite de decisão<span class="info-icon" tabindex="0" data-tooltip="Limiar dinâmico de decisão: atualizado a cada ciclo de acordo com as perdas observadas, ajustando o nível de risco utilizado para decidir entre Aprovar e Analisar.">i</span></span><span class="kpi-value" id="kpiLimiteDecisao">–</span></div>
+      <div class="kpi-card"><span class="kpi-label">Mudança detectada (D)<span class="info-icon" tabindex="0" data-tooltip="Variação da métrica de acompanhamento entre o ciclo atual e o anterior. Quando a diferença ultrapassa o limite γ, o sistema identifica uma mudança relevante e aciona um ajuste.">i</span></span><span class="kpi-value" id="kpiMudanca">–</span></div>
+      <div class="kpi-card"><span class="kpi-label">Iteração<span class="info-icon" tabindex="0" data-tooltip="Número de ciclos em que um resultado real (pagamento ou inadimplência) já foi observado e processado.">i</span></span><span class="kpi-value" id="kpiIteracao">0</span></div>
+      <div class="kpi-card"><span class="kpi-label">Latência (ms)<span class="info-icon" tabindex="0" data-tooltip="Tempo total, em milissegundos, para o ciclo completo passar pelos 6 agentes.">i</span></span><span class="kpi-value" id="kpiLatenciaTecnica">–</span></div>
+    </section>
+
+    <section class="panel-grid-2col">
+      <div class="panel" id="driftStatusPanel">
+        <div class="panel-head"><h2>Mudança no comportamento do modelo<span class="info-icon" tabindex="0" data-tooltip="Quando a diferença entre o comportamento atual e o anterior do sistema ultrapassa o limite definido para a simulação (γ), o sistema aciona um ajuste automático de pesos.">i</span></h2></div>
+        <div class="drift-status" id="driftStatusBody">
+          <span class="drift-badge" id="driftBadge">Sem dados</span>
+          <div class="drift-detail">
+            <div><span class="dm-label">Intensidade</span><span class="dm-value" id="driftIntensidade">–</span></div>
+            <div><span class="dm-label">Medida observada (D)</span><span class="dm-value" id="driftMedida">–</span></div>
+            <div><span class="dm-label">Limite (γ)</span><span class="dm-value" id="driftLimite">–</span></div>
+          </div>
+        </div>
+        <p class="panel-footnote">A diferença observada entre o comportamento atual e o anterior do modelo ultrapassou o limite definido para a simulação quando o selo acima indicar "Ajuste acionado".</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Importância média das variáveis<span class="info-icon" tabindex="0" data-tooltip="Magnitude média da atribuição (|∂PD/∂Fi|) de cada variável, sobre as últimas operações processadas. Acompanhar essa ordem ao longo do tempo ajuda a perceber se o comportamento das variáveis está mudando (drift de variável, não só de acurácia).">i</span></h2></div>
+        <div id="featureImportanceList" class="explain-list">
+          <div class="empty-state">Aguardando operações suficientes…</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel pipeline-panel">
+      <div class="panel-head">
+        <h2>Fluxo dos agentes<span class="info-icon" tabindex="0" data-tooltip="Visualização dos 6 agentes envolvidos no processo. Cada bolinha acende conforme o agente atua na operação atual, mostrando em tempo real o processamento dos eventos do sistema.">i</span></h2>
+        <span class="panel-sub">Aquisição de Dados → Transformação de Variáveis → Cálculo de Risco → Explicabilidade → Decisão → Aprendizado por Feedback</span>
+      </div>
+      <div class="pipeline-flow" id="pipelineFlow">
+        <div class="pf-node" data-node="data_acquisition_agent" data-tooltip="Recebe o evento bruto (nova solicitação de crédito), valida os campos obrigatórios e aplica a normalização Z-score (Equação 1). Também atualiza a janela de streaming (Equação 2)."><span class="pf-dot"></span><span class="pf-label">Aquisição<br>de Dados</span></div>
+        <div class="pf-arrow"></div>
+        <div class="pf-node" data-node="feature_transformation" data-tooltip="Aplica os pesos adaptativos a cada variável e calcula a fusão não linear entre elas, preparando a entrada para o modelo de risco."><span class="pf-dot"></span><span class="pf-label">Transformação<br>de Variáveis</span></div>
+        <div class="pf-arrow"></div>
+        <div class="pf-node" data-node="risk_scoring_agent" data-tooltip="Calcula a Probabilidade de Inadimplência (PD) via regressão logística sobre as variáveis ponderadas, e aplica o limite de decisão dinâmico atual."><span class="pf-dot"></span><span class="pf-label">Cálculo<br>de Risco</span></div>
+        <div class="pf-arrow"></div>
+        <div class="pf-node" data-node="explainability_agent" data-tooltip="Durante a decisão, calcula a contribuição de cada variável para a PD e a confiança da previsão. Essas informações são geradas pelo modelo no momento da análise, antes do resultado ser conhecido."><span class="pf-dot"></span><span class="pf-label">Explica-<br>bilidade</span></div>
+        <div class="pf-arrow"></div>
+        <div class="pf-node" data-node="decision_agent" data-tooltip="Compara a PD atual com o limite de decisão definido e classifica a operação como Aprovada, Em análise ou Recusada, conforme o nível de risco estimado."><span class="pf-dot"></span><span class="pf-label">Decisão</span></div>
+        <div class="pf-arrow pf-arrow-loop"></div>
+        <div class="pf-node" data-node="feedback_learning_agent" data-tooltip="Após o resultado real do contrato, o sistema calcula a perda, atualiza o limite de decisão e identifica mudanças no comportamento. Quando o risco ultrapassa o limite γ, o sistema ajusta os pesos das variáveis com base nesse novo aprendizado."><span class="pf-dot"></span><span class="pf-label">Aprendizado<br>por Feedback</span></div>
+      </div>
+    </section>
+
+    <section class="panel-grid-2col">
+      <div class="panel feedback-panel">
+        <div class="panel-head">
+          <h2>Aprendizado ao longo das iterações<span class="info-icon" tabindex="0" data-tooltip="Evolução da acurácia, do limite de decisão e da mudança de comportamento a cada iteração em que um resultado real foi observado.">i</span></h2>
+          <div class="chart-selector" id="feedbackSelector">
+            <button class="chip active" data-metric="all">Todos</button>
+            <button class="chip" data-metric="metric">Desempenho</button>
+            <button class="chip" data-metric="threshold">Limite</button>
+            <button class="chip" data-metric="drift">Mudança detectada</button>
+          </div>
+        </div>
+        <canvas id="feedbackChart" height="160"></canvas>
+        <div id="feedbackInterpretation" class="interpretation-card">
+          <span class="interp-label">Interpretação</span>
+          <p id="feedbackInterpretationText">Aguardando dados suficientes…</p>
+        </div>
+      </div>
+
+      <div class="panel monitoring-panel">
+        <div class="panel-head">
+          <h2>Histórico: Previsto vs. Realizado (mensal)<span class="info-icon" tabindex="0" data-tooltip="Compara, mês a mês, o PD médio previsto pelo modelo com a taxa real de inadimplência observada nesse mês de vencimento.">i</span></h2>
+          <span class="panel-sub">Agrupado pelo mês de vencimento</span>
+        </div>
+        <canvas id="monitoringChart" height="140"></canvas>
+        <div id="monitoringInterpretation" class="interpretation-card">
+          <span class="interp-label">Interpretação</span>
+          <p id="monitoringInterpretationText">Carregando…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel stream-panel">
+      <div class="panel-head"><h2>Eventos em tempo real (detalhe técnico)<span class="info-icon" tabindex="0" data-tooltip="Log ao vivo dos eventos processados pelo stream: novas solicitações, pagamentos, inadimplências e atualizações macro/climáticas.">i</span></h2></div>
+      <div id="streamLog" class="stream-log"></div>
+      <p class="panel-footnote">
+        <b>O que são estes eventos?</b> Nesta demonstração, os eventos são reproduzidos a partir de um 
+        histórico sintético para representar o funcionamento da gestão de crédito ao longo do tempo. Eles não correspondem
+        a ações de usuários reais. “Nova solicitação” representa um produtor solicitando crédito. “Pagamento” indica que o
+         contrato foi quitado normalmente, enquanto “Inadimplência” indica que o contrato não foi quitado integralmente 
+         e resultou em perda. Esses resultados são utilizados pelo <b>Aprendizado por Feedback</b> para avaliar os resultados
+          das decisões e atualizar o modelo de risco. A <b>perda</b> representa o percentual do valor emprestado que não foi 
+          recuperado: <b>0% significa que o contrato foi totalmente quitado</b>. Em um ambiente de produção, esses eventos 
+          seriam alimentados por sistemas reais de originação, pagamento, cobrança e liquidação.
+      </p>
+    </section>
+
+  </section>
+
+</div>
+
+<!-- ===== TUTORIAL MODAL ===== -->
+<div id="helpModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Como usar o painel FarmTech</h2>
+      <button id="btnCloseHelp" class="btn btn-ghost btn-icon" aria-label="Fechar tutorial">✕</button>
+    </div>
+    <div class="modal-tabs" id="modalTabs">
+      <button class="mtab active" data-persona="visao_geral">Visão Geral</button>
+      <button class="mtab" data-persona="negocios">Analista de Negócios</button>
+      <button class="mtab" data-persona="dados">Analista de Dados</button>
+      <button class="mtab" data-persona="bi">Analista de BI</button>
+      <button class="mtab" data-persona="credito">Analista de Crédito</button>
+      <button class="mtab" data-persona="carteira">Gerente de Carteira</button>
+      <button class="mtab" data-persona="ceo">CEO</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- ===== ARCHITECTURE MODAL ===== -->
+<div id="architectureModal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Arquitetura completa</h2>
+      <button id="btnCloseArchitecture" class="btn btn-ghost btn-icon">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="arch-intro">
+        Este painel é uma <b>demonstração funcional</b> da arquitetura proposta em
+        <i>"Agentic AI for Autonomous, Explainable, and Real-Time Credit Risk Decision-Making"</i>
+        (Kubam, C. S., 2024, IJISAE 12(23s)), adaptada ao crédito agropecuário brasileiro e
+        executada sobre dados 100% sintéticos. Não é um sistema de produção.
+      </p>
+
+      <h3>Fluxo completo</h3>
+      <div class="arch-diagram">
+        <div class="arch-step"><b>1. Aquisição de Dados</b><span>Recebe o evento (nova solicitação), valida e normaliza (Eq. 1) e atualiza a janela de streaming (Eq. 2).</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-step"><b>2. Transformação de Variáveis</b><span>Aplica pesos adaptativos por variável (Eq. 3) e fusão não linear entre elas (Eq. 4).</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-step"><b>3. Cálculo de Risco</b><span>Regressão logística calcula a Probabilidade de Inadimplência (PD).</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-step"><b>4. Explicabilidade</b><span>Atribuição por variável via derivada parcial e confiança da previsão; calculadas no momento da decisão.</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-step"><b>5. Decisão</b><span>PD &lt; limite → Aprovado · PD = limite → Em análise · PD &gt; limite → Recusado.</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-step"><b>Resultado real observado</b><span>Pagamento ou inadimplência do contrato (dado histórico, no caso desta simulação).</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-step"><b>6. Aprendizado por Feedback</b><span>Calcula perda e mudança de comportamento; se ultrapassar γ, reajusta os pesos das variáveis; sempre atualiza o limite de decisão dinâmico (Eq. 6).</span></div>
+        <div class="arch-arrow arch-arrow-loop">↺ realimenta o próximo ciclo</div>
+      </div>
+
+      <h3>Os 3 pilares da IA Agêntica nesta arquitetura</h3>
+      <ul>
+        <li><b>Aprendizado de Máquina</b>: a regressão logística que calcula o PD (Cálculo de Risco).</li>
+        <li><b>XAI (IA Explicável)</b>: a atribuição por variável, calculada dentro do próprio ciclo de decisão, não depois (Explicabilidade).</li>
+        <li><b>Aprendizado por Reforço</b>: o ajuste determinístico dos pesos das variáveis e do limite de decisão, acionado quando a mudança de comportamento ultrapassa o limite γ (Aprendizado por Feedback).</li>
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js?v=6"></script>
+<script src="js/agents.js?v=6"></script>
+<script src="js/charts.js?v=6"></script>
+<script src="js/map.js?v=6"></script>
+<script src="js/stream.js?v=6"></script>
+<script src="js/tutorial.js?v=6"></script>
+<script src="js/portfolio.js?v=6"></script>
+<script src="js/tour.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
+</body>
+</html>
