@@ -1,4 +1,4 @@
-# FarmTech — Gestão Preditiva de Risco de Crédito Agropecuário
+# Arquitetura Agêntica para Tomada de Decisão Preditiva, Autônoma, Explicável e em Tempo Real sobre Risco de Crédito
 
 > Réplica arquitetural funcional do artigo **"Agentic AI for Autonomous, Explainable, and
 > Real-Time Credit Risk Decision-Making"** (Kubam, C. S., 2024, *IJISAE* 12(23s)), adaptada
