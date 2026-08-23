@@ -162,18 +162,6 @@ Se preferir criar manualmente (New → Web Service) em vez de usar o Blueprint, 
 | `OPENAI_NARRATIVE_MODEL` | Opcional | `gpt-4o-mini` (padrão já usado se você não definir nada) |
 | `PORT` | Não preencher | O Render define automaticamente — o `startCommand` já usa `$PORT`. |
 
-### ⚠️ Importante sobre o plano gratuito do Render
-
-- **Sistema de arquivos efêmero**: no plano free, o disco é recriado a cada deploy/restart.
-  Isso significa que `data/adaptive_state.json` e `data/outcomes.json` (a persistência do
-  estado adaptativo entre reinicializações, ver seção 43 do plano de implementação) **são
-  perdidos toda vez que o serviço reinicia ou hiberna**. Para persistência real em produção,
-  seria necessário um [Render Disk](https://render.com/docs/disks) (pago) ou mover esse
-  estado para um banco externo.
-- **Hibernação por inatividade**: no plano free, o serviço "dorme" após ~15 min sem tráfego
-  e leva de 30 a 60 segundos para acordar na primeira requisição seguinte.
-- Nenhuma dessas limitações afeta a correção do sistema — só a persistência entre reinícios,
-  que já não é o foco desta demonstração.
 
 ## Estrutura do projeto
 
